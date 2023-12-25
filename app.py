@@ -4,11 +4,10 @@ import streamlit as st
 from model.model import MyModel
 
 @st.cache_resource()
-def load_model(model_path: str = 'path/to/model', df_path: str = 'path/to/df') -> MyModel:
+def load_model(df_path: str = 'path/to/df') -> MyModel:
     """Логика загрузки модели машинного обучения.
 
     Args:
-        model_path (str, optional): Путь до модели. Defaults to 'path/to/model'.
         df_path (str, optional): Путь до датафрейма в котором будет производится поиск. Defaults to 'path/to/df'.
 
     Returns:
@@ -56,8 +55,7 @@ def main():
 
     # Логика работы с ml моделью
     model = load_model()
-    search = model.search(search_text)
-    prediction = model.make_prediction(search_text)
+    search_df = model.search(product_id)
     
     # Логика отображения
     st.text('Найденный продукт:')
@@ -67,7 +65,7 @@ def main():
     
     st.text('Топ 5 самых похожих продуктов:')
     # Заглушка для примера
-    st.dataframe(st.session_state.df.sample(5), hide_index=True)
+    st.dataframe(search_df, hide_index=True)
 
 if __name__ == '__main__':
     main()
