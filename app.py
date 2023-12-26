@@ -16,6 +16,7 @@ def load_model(df_path: str = 'data/with_clusters.csv', n: int = 5) -> MyModel:
     """
     return MyModel(df_path, n)
 
+
 def load_df(df_path: str = 'data/worked_data.csv') -> pd.DataFrame:
     """Логика загрузки датафрейма в страницу.
 
@@ -29,6 +30,7 @@ def load_df(df_path: str = 'data/worked_data.csv') -> pd.DataFrame:
     df = df.drop(columns = ['Unnamed: 0'])
     df = df[df['name'].notna()]
     return df
+
 
 def prod_id_to_dict(df: pd.DataFrame, id: str) -> dict:
     """Преобразование id продукта к словарю с его свойствами из датафрейма.
@@ -47,19 +49,32 @@ def prod_id_to_dict(df: pd.DataFrame, id: str) -> dict:
         result = {}
     return result
 
-def find_product_id(name: str, kitchen: str, geohash: str) -> str:
-    """_summary_
+
+def find_product_id(name: str, kitchen: str, geohash: str, df: pd.DataFrame) -> str:
+    """Поиск ID продукта исходя из его описания (работает только если такое сочетание признаков существует).
 
     Args:
-        name (str): _description_
-        kitchen (str): _description_
-        geohash (str): _description_
+        name (str): Имя продукта.
+        kitchen (str): К какой кухне принадлежит.
+        geohash (str): К какому геохешу принадлежит.
+        df (pd.DataFrame): Датафрейм в котором будем искать id.
 
     Returns:
-        str: _description_
+        str: id продукта.
     """
+    pred1 = df['geohash'] == geohash
+    pred2 = df['primary_cuisine'] == kitchen
+    pred3 = df['en_name'] == name
+    return df[pred1 & pred2 & pred3]['product_id'].tolist()[0]
+
 
 def main():
+    if 'df' not in st.session_state:
+        st.session_state.df = load_df()
+        st.session_state.geohash = sorted(st.session_state.df['geohash'].unique().tolist())
+        st.session_state.kitchen = sorted(st.session_state.df['primary_cuisine'].unique().tolist())
+        st.session_state.product = sorted(st.session_state.df['en_name'].unique().tolist())
+    
     # Sidebar Search
     form = st.sidebar.form(key='Search')
     form.header("Поисковый запрос")
@@ -67,6 +82,7 @@ def main():
     geohash_search = form.selectbox('Выберите геохэш еды:', st.session_state.geohash)
     kitchen_search = form.selectbox('Выберите кухню:', st.session_state.kitchen)
     name_search = form.selectbox('Выберите название блюда:', st.session_state.product)
+    
     form.form_submit_button('Поиск')
 
     # Sidebar Contributors
@@ -81,16 +97,10 @@ def main():
     # Main Logic App 
     st.title("Приложениее для поиска товаров-заменителей")
 
-    if 'df' not in st.session_state:
-        st.session_state.df = load_df()
-        st.session_state.geohash = sorted(st.session_state.df['geohash'].unique().tolist())
-        st.session_state.kitchen = sorted(st.session_state.df['primary_cuisine'].unique().tolist())
-        st.session_state.product = sorted(st.session_state.df['en_name'].unique().tolist())
-
-    
     # Логика отображения
     # Продукт, найденный по критериям поиска
     st.text('Найденный продукт:')
+    product_id = find_product_id(name_search, kitchen_search, geohash_search, st.session_state.df)
     pred = prod_id_to_dict(st.session_state.df, product_id)
     st.write(pred)
     
@@ -101,6 +111,7 @@ def main():
     
     st.text('Топ 5 самых похожих продуктов:')
     st.dataframe(search_df, hide_index=True)
+
 
 if __name__ == '__main__':
     main()
