@@ -65,7 +65,11 @@ def find_product_id(name: str, kitchen: str, geohash: str, df: pd.DataFrame) -> 
     pred1 = df['geohash'] == geohash
     pred2 = df['primary_cuisine'] == kitchen
     pred3 = df['en_name'] == name
-    return df[pred1 & pred2 & pred3]['product_id'].tolist()[0]
+    result = df[pred1 & pred2 & pred3]['product_id'].tolist()
+    if len(result) != 0:
+        return result[0]
+    else:
+        return None
 
 
 def main():
@@ -101,16 +105,24 @@ def main():
     # Продукт, найденный по критериям поиска
     st.text('Найденный продукт:')
     product_id = find_product_id(name_search, kitchen_search, geohash_search, st.session_state.df)
-    pred = prod_id_to_dict(st.session_state.df, product_id)
-    st.write(pred)
-    
-    # Поиск товаров заменителей
-    model = load_model()
-    search_list = model.search(product_id) 
-    search_df = st.session_state.df[st.session_state.df['product_id'].isin(search_list)].drop(columns = ['product_id'])
-    
-    st.text('Топ 5 самых похожих продуктов:')
-    st.dataframe(search_df, hide_index=True)
+    if product_id is not None:
+        pred = prod_id_to_dict(st.session_state.df, product_id)
+        st.write(pred)
+        
+        # Поиск товаров заменителей
+        model = load_model()
+        search_list = model.search(product_id) 
+        search_df = st.session_state.df[st.session_state.df['product_id'].isin(search_list)].drop(columns = ['product_id'])
+        
+        st.divider()
+        st.text('Топ 5 самых похожих продуктов:')
+        st.dataframe(search_df, hide_index=True)
+    else:
+        st.markdown(f'''Продукт с параметрами 
+                    \ngeohash:`{geohash_search}`
+                   \nkitchen:`{kitchen_search}`
+                   \nproduct name:`{name_search}`
+                   \nне найден в базе данных!''')
 
 
 if __name__ == '__main__':
